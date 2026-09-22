@@ -1,4 +1,5 @@
 plugins:
+  enabled:
     - xai-proxy-model
     - xai-proxy-web
     - xai-proxy-image

@@ -28,13 +28,26 @@ XAI_PROXY_API_KEY=your-key
 Optional settings:
 
 ```env
-XAI_PROXY_SEARCH_MODEL=grok-4.6
-XAI_PROXY_TTS_MODEL=grok-tts
-XAI_PROXY_STT_MODEL=grok-voice-transcribe-2.0
+XAI_PROXY_SEARCH_MODEL=grok-4.20-multi-agent-0309
+XAI_PROXY_TTS_MODEL=grok-voice-think-fast-2.0
+XAI_PROXY_STT_MODEL=grok-stt
 XAI_PROXY_STT_TIMEOUT=180
 ```
 
 Use HTTPS in production so the API key is not sent over plaintext HTTP.
+
+## Model reference
+
+These values match `config.example.yaml`:
+
+| Surface | Model |
+|---|---|
+| Default | `grok-4.7` |
+| Web search | `grok-4.20-multi-agent-0309` |
+| Image generation | `grok-imagine-image-2.0` |
+| Video generation | `grok-imagine-video` |
+| TTS | `grok-voice-think-fast-2.0` |
+| STT | `grok-stt` |
 
 ## Install
 
@@ -46,6 +59,22 @@ HERMES_HOME=/opt/data ./install.sh
 
 The installer creates timestamped backups before replacing existing plugin directories.
 
+
+### Install from GitHub
+
+Hermes supports `owner/repo/subdir` Git installs. This repository contains multiple plugins and has no single root manifest, so install each plugin subdirectory separately:
+
+```text
+sky32/hermes-xai-proxy/plugins/model-providers/xai
+sky32/hermes-xai-proxy/plugins/web/xai
+sky32/hermes-xai-proxy/plugins/image_gen/xai
+sky32/hermes-xai-proxy/plugins/video_gen/xai
+sky32/hermes-xai-proxy/plugins/xai-proxy-tools
+sky32/hermes-xai-proxy/plugins/xai-proxy-tts
+sky32/hermes-xai-proxy/plugins/transcription/xai-proxy
+```
+
+Enter these paths one at a time in Hermes' “Install from GitHub / Git URL” screen and select “Enable after install”. `xai-proxy-tools` additionally requires the `tools.override` capability.
 Enable the plugins:
 
 ```bash
@@ -65,7 +94,7 @@ Merge `config.example.yaml` into Hermes' `config.yaml`, then restart Hermes.
 The TTS model can be selected through the environment:
 
 ```env
-XAI_PROXY_TTS_MODEL=grok-tts
+XAI_PROXY_TTS_MODEL=grok-voice-think-fast-2.0
 ```
 
 Or through `config.yaml`:
@@ -74,7 +103,7 @@ Or through `config.yaml`:
 tts:
   provider: xai-proxy
   xai-proxy:
-    model: grok-tts
+    model: grok-voice-think-fast-2.0
     voice_id: eve
     language: auto
     speed: 1.0
@@ -88,7 +117,7 @@ The provider calls `POST $XAI_PROXY_BASE_URL/tts`, supports voice listing throug
 stt:
   provider: xai-proxy
   xai-proxy:
-    model: grok-voice-transcribe-2.0
+    model: grok-stt
 ```
 
 The provider calls multipart `POST $XAI_PROXY_BASE_URL/stt`.

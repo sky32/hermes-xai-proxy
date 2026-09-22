@@ -29,13 +29,26 @@ XAI_PROXY_API_KEY=your-key
 可选配置：
 
 ```env
-XAI_PROXY_SEARCH_MODEL=grok-4.6
-XAI_PROXY_TTS_MODEL=grok-tts
-XAI_PROXY_STT_MODEL=grok-voice-transcribe-2.0
+XAI_PROXY_SEARCH_MODEL=grok-4.20-multi-agent-0309
+XAI_PROXY_TTS_MODEL=grok-voice-think-fast-2.0
+XAI_PROXY_STT_MODEL=grok-stt
 XAI_PROXY_STT_TIMEOUT=180
 ```
 
 生产环境请使用 HTTPS，避免 API Key 通过明文网络传输。
+
+## 模型参考
+
+以下模型与 `config.example.yaml` 保持一致：
+
+| 功能 | 模型 |
+|---|---|
+| 默认模型 | `grok-4.7` |
+| 网页搜索 | `grok-4.20-multi-agent-0309` |
+| 图片生成 | `grok-imagine-image-2.0` |
+| 视频生成 | `grok-imagine-video` |
+| TTS | `grok-voice-think-fast-2.0` |
+| STT | `grok-stt` |
 
 ## 安装
 
@@ -61,12 +74,28 @@ hermes plugins enable xai-proxy-stt
 
 然后将 `config.example.yaml` 合并到 Hermes 的 `config.yaml`，重启 Hermes。
 
+### 从 GitHub 安装
+
+Hermes 的 Git 安装器支持 `owner/repo/subdir`。本项目是多插件仓库，根目录没有单一 manifest，因此建议按插件子目录分别安装：
+
+```text
+sky32/hermes-xai-proxy/plugins/model-providers/xai
+sky32/hermes-xai-proxy/plugins/web/xai
+sky32/hermes-xai-proxy/plugins/image_gen/xai
+sky32/hermes-xai-proxy/plugins/video_gen/xai
+sky32/hermes-xai-proxy/plugins/xai-proxy-tools
+sky32/hermes-xai-proxy/plugins/xai-proxy-tts
+sky32/hermes-xai-proxy/plugins/transcription/xai-proxy
+```
+
+在 Hermes 的“从 GitHub / Git 地址安装”中逐个输入上述路径，勾选“安装后启用”。`xai-proxy-tools` 还需要允许 `tools.override`。
+
 ## TTS 配置
 
 TTS 模型可以通过环境变量设置：
 
 ```env
-XAI_PROXY_TTS_MODEL=grok-tts
+XAI_PROXY_TTS_MODEL=grok-voice-think-fast-2.0
 ```
 
 也可以在 `config.yaml` 中设置：
@@ -75,7 +104,7 @@ XAI_PROXY_TTS_MODEL=grok-tts
 tts:
   provider: xai-proxy
   xai-proxy:
-    model: grok-tts
+    model: grok-voice-think-fast-2.0
     voice_id: eve
     language: auto
     speed: 1.0
@@ -89,7 +118,7 @@ TTS 请求发送到 `POST $XAI_PROXY_BASE_URL/tts`，语音列表从 `GET /tts/v
 stt:
   provider: xai-proxy
   xai-proxy:
-    model: grok-voice-transcribe-2.0
+    model: grok-stt
 ```
 
 STT 请求以 multipart 形式发送到 `POST $XAI_PROXY_BASE_URL/stt`。
