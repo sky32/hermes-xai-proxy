@@ -127,12 +127,20 @@ The uninstall script moves plugin directories to timestamped backups. Configurat
 
 ## Validate
 
+After a Hermes Git install, plugins are placed under `/opt/data/plugins` using their manifest names:
+
 ```bash
-hermes plugins validate /opt/data/plugins/web/xai
-hermes plugins validate /opt/data/plugins/image_gen/xai
-hermes plugins validate /opt/data/plugins/video_gen/xai
+hermes plugins validate /opt/data/plugins/xai-proxy-model
+hermes plugins validate /opt/data/plugins/xai-proxy-web
+hermes plugins validate /opt/data/plugins/xai-proxy-image
+hermes plugins validate /opt/data/plugins/xai-proxy-video
+hermes plugins validate /opt/data/plugins/xai-proxy-tools
+hermes plugins validate /opt/data/plugins/xai-proxy-tts
+hermes plugins validate /opt/data/plugins/xai-proxy-stt
 hermes plugins capabilities xai-proxy-tools
 ```
+
+Use paths such as `/opt/data/plugins/web/xai` only when installing manually with `install.sh`.
 
 ## Runtime compatibility
 

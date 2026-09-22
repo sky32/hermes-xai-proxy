@@ -128,12 +128,21 @@ HERMES_HOME=/opt/data ./uninstall.sh
 
 ## 验证
 
+通过 Hermes Git 安装后，插件会按 manifest 名称安装到 `/opt/data/plugins`：
+
 ```bash
-hermes plugins validate /opt/data/plugins/web/xai
-hermes plugins validate /opt/data/plugins/image_gen/xai
-hermes plugins validate /opt/data/plugins/video_gen/xai
+hermes plugins validate /opt/data/plugins/xai-proxy-model
+hermes plugins validate /opt/data/plugins/xai-proxy-web
+hermes plugins validate /opt/data/plugins/xai-proxy-image
+hermes plugins validate /opt/data/plugins/xai-proxy-video
+hermes plugins validate /opt/data/plugins/xai-proxy-tools
+hermes plugins validate /opt/data/plugins/xai-proxy-tts
+hermes plugins validate /opt/data/plugins/xai-proxy-stt
 hermes plugins capabilities xai-proxy-tools
 ```
+
+只有使用 `install.sh` 手动复制时，才使用 `/opt/data/plugins/web/xai`、`/opt/data/plugins/image_gen/xai` 等源码目录路径。
+
 
 ## 运行时兼容性
 
