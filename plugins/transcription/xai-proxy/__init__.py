@@ -6,7 +6,7 @@ import mimetypes
 import requests
 
 from agent.transcription_provider import TranscriptionProvider
-from hermes_cli.config import get_env_value
+from hermes_cli.config import get_env_value, load_config
 
 def _env(key: str) -> str:
     return str(get_env_value(key) or "").strip()
@@ -18,6 +18,19 @@ def _float_env(key: str, default: float) -> float:
         return value if value > 0 else default
     except (TypeError, ValueError):
         return default
+
+
+def _extra_params() -> Dict[str, Any]:
+    try:
+        cfg = load_config() or {}
+    except Exception:
+        cfg = {}
+    common = ((cfg.get("xai_proxy") or {}).get("extra_params") or {}).get("stt", {})
+    local = (((cfg.get("stt") or {}).get("xai-proxy") or {}).get("extra_params") or {})
+    out = dict(common) if isinstance(common, dict) else {}
+    if isinstance(local, dict):
+        out.update(local)
+    return out
 
 
 class XAIProxySTTProvider(TranscriptionProvider):
@@ -66,6 +79,7 @@ class XAIProxySTTProvider(TranscriptionProvider):
             data = {"model": model or self.default_model()}
             if language:
                 data["language"] = language
+            data.update(_extra_params())
 
             with path.open("rb") as fh:
                 r = requests.post(

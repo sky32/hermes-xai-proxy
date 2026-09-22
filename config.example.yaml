@@ -8,6 +8,21 @@ plugins:
     - xai-proxy-tts
     - xai-proxy-stt
 
+# Parameters under xai_proxy.extra_params are merged into the corresponding
+# request body after Hermes has built its native fields. Values here are proxy
+# or upstream-specific; use the per-plugin extra_params blocks below when a
+# setting should apply only to one plugin.
+xai_proxy:
+  extra_params:
+    images: {}
+    chat: {}
+    responses: {}
+    messages: {}
+    videos: {}
+    tts: {}
+    stt: {}
+    web: {}
+
 # The model provider keeps the canonical name "xai".
 model:
   provider: xai
@@ -22,10 +37,14 @@ web:
 image_gen:
   provider: xai
   model: grok-imagine-image-2.0
+  # Example: n: 1, response_format: url, or stream: true for a proxy that
+  # supports the image-generation SSE extension.
+  extra_params: {}
 
 video_gen:
   provider: xai
   model: grok-imagine-video
+  extra_params: {}
 
 x_search:
   model: grok-4.20-multi-agent-0309
@@ -44,6 +63,7 @@ tts:
     sample_rate: 24000
     bit_rate: 128000
     timeout: 120
+    extra_params: {}
 
 # Same rule for STT: built-ins always win, so use xai-proxy.
 stt:
@@ -51,3 +71,4 @@ stt:
   xai-proxy:
     model: grok-stt
     language: ""
+    extra_params: {}

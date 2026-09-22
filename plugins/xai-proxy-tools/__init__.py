@@ -5,7 +5,21 @@ import sys
 from pathlib import Path
 from typing import Any, Dict
 
-from hermes_cli.config import get_env_value
+from hermes_cli.config import get_env_value, load_config
+
+
+def _extra_params(operation: str) -> Dict[str, Any]:
+    try:
+        cfg = load_config() or {}
+    except Exception:
+        cfg = {}
+    common = ((cfg.get("xai_proxy") or {}).get("extra_params") or {}).get(operation, {})
+    section = cfg.get("x_search") if operation == "responses" else cfg.get("video_gen")
+    local = (section or {}).get("extra_params") or {}
+    out = dict(common) if isinstance(common, dict) else {}
+    if isinstance(local, dict):
+        out.update(local)
+    return out
 
 
 def _proxy_credentials() -> Dict[str, Any]:
@@ -145,6 +159,7 @@ def _x_search(args, **kwargs):
         "tools": [tool],
         "store": False,
     }
+    payload.update(_extra_params("responses"))
 
     try:
         resp = requests.post(
@@ -206,6 +221,14 @@ def _video_module():
         str(_proxy_credentials()["api_key"]),
         str(_proxy_credentials()["base_url"]),
     )
+    original_submit = mod._submit_xai_video_payload
+
+    async def submit_with_extras(api_key, base_url, endpoint, payload, **kwargs):
+        merged = dict(payload)
+        merged.update(_extra_params("videos"))
+        return await original_submit(api_key, base_url, endpoint, merged, **kwargs)
+
+    mod._submit_xai_video_payload = submit_with_extras
     return mod
 
 

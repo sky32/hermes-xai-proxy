@@ -35,6 +35,39 @@ XAI_PROXY_STT_MODEL=grok-stt
 XAI_PROXY_STT_TIMEOUT=180
 ```
 
+### 自定义附加参数
+
+所有代理插件都支持在请求体中追加代理或上游专用字段。通用配置放在
+`xai_proxy.extra_params` 下，键名对应请求类型；插件自己的 `extra_params`
+会覆盖同名通用字段：
+
+```yaml
+xai_proxy:
+  extra_params:
+    images:
+      n: 1
+      aspect_ratio: "16:9"
+      resolution: 2k
+      response_format: url
+      stream: false
+    chat:
+      temperature: 0.7
+    responses: {}
+    messages: {}
+    videos:
+      duration: 8
+      resolution: 720p
+    tts:
+      with_timestamps: false
+    stt: {}
+    web: {}
+```
+
+支持的类型包括 `images`、`chat`、`responses`、`messages`、`videos`、`tts`、
+`stt` 和 `web`。附加字段会原样转发；如果与 Hermes 已生成的字段同名，
+附加参数优先，因此请只覆盖确实需要交给代理处理的字段。图片/视频插件仍由
+Hermes 负责结果解析，配置 SSE 或异步行为前请确认对应 Hermes 版本支持该返回格式。
+
 生产环境请使用 HTTPS，避免 API Key 通过明文网络传输。
 
 ## 模型参考

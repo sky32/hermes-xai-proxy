@@ -5,7 +5,21 @@ import sys
 from pathlib import Path
 from typing import Any, Dict
 
-from hermes_cli.config import get_env_value
+from hermes_cli.config import get_env_value, load_config
+
+
+def _extra_params(operation: str = "videos") -> Dict[str, Any]:
+    try:
+        cfg = load_config() or {}
+    except Exception:
+        cfg = {}
+    common = ((cfg.get("xai_proxy") or {}).get("extra_params") or {}).get(operation, {})
+    video_cfg = cfg.get("video_gen") or {}
+    local = video_cfg.get("extra_params") or ((video_cfg.get("xai") or {}).get("extra_params") or {})
+    out = dict(common) if isinstance(common, dict) else {}
+    if isinstance(local, dict):
+        out.update(local)
+    return out
 
 
 def _proxy_credentials() -> Dict[str, Any]:
@@ -61,6 +75,14 @@ def _load_video_module():
         str(_proxy_credentials()["api_key"]),
         str(_proxy_credentials()["base_url"]),
     )
+    original_submit = mod._submit_xai_video_payload
+
+    async def submit_with_extras(api_key, base_url, endpoint, payload, **kwargs):
+        merged = dict(payload)
+        merged.update(_extra_params())
+        return await original_submit(api_key, base_url, endpoint, merged, **kwargs)
+
+    mod._submit_xai_video_payload = submit_with_extras
     return mod
 
 

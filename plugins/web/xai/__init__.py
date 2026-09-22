@@ -5,7 +5,20 @@ import sys
 from pathlib import Path
 from typing import Any, Dict
 
-from hermes_cli.config import get_env_value
+from hermes_cli.config import get_env_value, load_config
+
+
+def _extra_params() -> Dict[str, Any]:
+    try:
+        cfg = load_config() or {}
+    except Exception:
+        cfg = {}
+    common = ((cfg.get("xai_proxy") or {}).get("extra_params") or {}).get("web", {})
+    local = (((cfg.get("web") or {}).get("xai") or {}).get("extra_params") or {})
+    out = dict(common) if isinstance(common, dict) else {}
+    if isinstance(local, dict):
+        out.update(local)
+    return out
 
 
 def _proxy_credentials() -> Dict[str, Any]:
@@ -61,8 +74,16 @@ def register(ctx) -> None:
     # Patch the bundled provider's credential seams.
     mod.resolve_xai_http_credentials = lambda *a, **kw: _proxy_credentials()
     mod.has_xai_credentials = _proxy_ready
+    original_post = mod.XAIWebSearchProvider._post_responses
 
-    class XAIProxyWebProvider(mod.XAIWebSearchProvider):
+    class XAIProxyWebSearchProvider(mod.XAIWebSearchProvider):
+        @staticmethod
+        def _post_responses(base_url, payload, api_key, timeout, *, is_oauth_path):
+            merged = dict(payload)
+            merged.update(_extra_params())
+            return original_post(base_url, merged, api_key, timeout, is_oauth_path=is_oauth_path)
+
+    class XAIProxyWebProvider(XAIProxyWebSearchProvider):
         DISPLAY_NAME = "xAI Web Search (via proxy)"
 
         def get_setup_schema(self):

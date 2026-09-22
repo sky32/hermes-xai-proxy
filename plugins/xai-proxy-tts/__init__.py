@@ -26,6 +26,20 @@ def _cfg() -> Dict[str, Any]:
     except Exception:
         return {}
 
+
+def _extra_params() -> Dict[str, Any]:
+    cfg = _cfg()
+    try:
+        root = load_config() or {}
+    except Exception:
+        root = {}
+    common = ((root.get("xai_proxy") or {}).get("extra_params") or {}).get("tts", {})
+    local = cfg.get("extra_params") or {}
+    out = dict(common) if isinstance(common, dict) else {}
+    if isinstance(local, dict):
+        out.update(local)
+    return out
+
 class XAIProxyTTSProvider(TTSProvider):
     @property
     def name(self) -> str:
@@ -123,6 +137,7 @@ class XAIProxyTTSProvider(TTSProvider):
             payload["text_normalization"] = bool(cfg["text_normalization"])
         if "optimize_streaming_latency" in cfg:
             payload["optimize_streaming_latency"] = int(cfg["optimize_streaming_latency"])
+        payload.update(_extra_params())
 
         try:
             r = requests.post(

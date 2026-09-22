@@ -5,7 +5,21 @@ import sys
 from pathlib import Path
 from typing import Any, Dict
 
-from hermes_cli.config import get_env_value
+from hermes_cli.config import get_env_value, load_config
+
+
+def _extra_params() -> Dict[str, Any]:
+    try:
+        cfg = load_config() or {}
+    except Exception:
+        cfg = {}
+    common = ((cfg.get("xai_proxy") or {}).get("extra_params") or {}).get("images", {})
+    image_cfg = cfg.get("image_gen") or {}
+    local = image_cfg.get("extra_params") or ((image_cfg.get("xai") or {}).get("extra_params") or {})
+    out = dict(common) if isinstance(common, dict) else {}
+    if isinstance(local, dict):
+        out.update(local)
+    return out
 
 
 def _proxy_credentials() -> Dict[str, Any]:
@@ -59,6 +73,15 @@ def register(ctx) -> None:
     mod = _load_file("_hermes_builtin_image_xai_proxywrap", path)
 
     mod.resolve_xai_http_credentials = lambda *a, **kw: _proxy_credentials()
+    original_post_json = mod.post_json
+
+    def post_json_with_extras(endpoint_url, *args, **kwargs):
+        payload = kwargs.get("payload")
+        if isinstance(payload, dict):
+            kwargs["payload"] = {**payload, **_extra_params()}
+        return original_post_json(endpoint_url, *args, **kwargs)
+
+    mod.post_json = post_json_with_extras
 
     class XAIProxyImageGenProvider(mod.XAIImageGenProvider):
         label = "xAI (via proxy)"
