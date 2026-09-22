@@ -91,13 +91,8 @@ Merge `config.example.yaml` into Hermes' `config.yaml`, then restart Hermes.
 
 ## TTS
 
-The TTS model can be selected through the environment:
+The TTS model, voice, and other parameters can be set in `config.yaml`:
 
-```env
-XAI_PROXY_TTS_MODEL=grok-voice-think-fast-2.0
-```
-
-Or through `config.yaml`:
 
 ```yaml
 tts:

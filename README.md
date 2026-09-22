@@ -92,13 +92,8 @@ sky32/hermes-xai-proxy/plugins/transcription/xai-proxy
 
 ## TTS 配置
 
-TTS 模型可以通过环境变量设置：
+TTS 模型、语音和其他参数可以在 `config.yaml` 中设置：
 
-```env
-XAI_PROXY_TTS_MODEL=grok-voice-think-fast-2.0
-```
-
-也可以在 `config.yaml` 中设置：
 
 ```yaml
 tts:
