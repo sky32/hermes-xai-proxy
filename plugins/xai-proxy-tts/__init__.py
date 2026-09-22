@@ -40,6 +40,15 @@ def _extra_params() -> Dict[str, Any]:
         out.update(local)
     return out
 
+
+def _api_format() -> str:
+    try:
+        root = load_config() or {}
+    except Exception:
+        root = {}
+    value = ((root.get("xai_proxy") or {}).get("api_format") or _env("XAI_PROXY_API_FORMAT") or "xai")
+    return str(value).strip().lower() if str(value).strip().lower() in {"xai", "openai"} else "xai"
+
 class XAIProxyTTSProvider(TTSProvider):
     @property
     def name(self) -> str:
@@ -119,29 +128,37 @@ class XAIProxyTTSProvider(TTSProvider):
         rate = _positive_number(speed if speed is not None else cfg.get("speed", 1.0), 1.0)
         rate = max(0.7, min(1.5, rate))
 
-        payload = {
-            "model": model or _env("XAI_PROXY_TTS_MODEL") or cfg.get("model") or "grok-voice-think-fast-2.0",
-            "text": text,
-            "voice_id": voice or cfg.get("voice_id") or "eve",
-            "language": language,
-            "speed": rate,
-            "output_format": {
-                "codec": codec,
-                "sample_rate": sample_rate,
-            },
-        }
-        if codec == "mp3":
-            payload["output_format"]["bit_rate"] = bit_rate
+        if _api_format() == "openai":
+            payload = {
+                "model": model or _env("XAI_PROXY_TTS_MODEL") or cfg.get("model") or "gpt-4o-mini-tts",
+                "input": text,
+                "voice": voice or cfg.get("voice_id") or "alloy",
+                "speed": rate,
+                "response_format": codec,
+            }
+            endpoint = "/audio/speech"
+        else:
+            payload = {
+                "model": model or _env("XAI_PROXY_TTS_MODEL") or cfg.get("model") or "grok-voice-think-fast-2.0",
+                "text": text,
+                "voice_id": voice or cfg.get("voice_id") or "eve",
+                "language": language,
+                "speed": rate,
+                "output_format": {"codec": codec, "sample_rate": sample_rate},
+            }
+            if codec == "mp3":
+                payload["output_format"]["bit_rate"] = bit_rate
+            endpoint = "/tts"
 
-        if "text_normalization" in cfg:
+        if _api_format() == "xai" and "text_normalization" in cfg:
             payload["text_normalization"] = bool(cfg["text_normalization"])
-        if "optimize_streaming_latency" in cfg:
+        if _api_format() == "xai" and "optimize_streaming_latency" in cfg:
             payload["optimize_streaming_latency"] = int(cfg["optimize_streaming_latency"])
         payload.update(_extra_params())
 
         try:
             r = requests.post(
-                f"{base}/tts",
+                f"{base}{endpoint}",
                 headers={
                     "Authorization": f"Bearer {key}",
                     "Content-Type": "application/json",

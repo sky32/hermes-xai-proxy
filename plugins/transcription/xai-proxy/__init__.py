@@ -33,6 +33,15 @@ def _extra_params() -> Dict[str, Any]:
     return out
 
 
+def _api_format() -> str:
+    try:
+        cfg = load_config() or {}
+    except Exception:
+        cfg = {}
+    value = ((cfg.get("xai_proxy") or {}).get("api_format") or _env("XAI_PROXY_API_FORMAT") or "xai")
+    return str(value).strip().lower() if str(value).strip().lower() in {"xai", "openai"} else "xai"
+
+
 class XAIProxySTTProvider(TranscriptionProvider):
     @property
     def name(self) -> str:
@@ -83,7 +92,7 @@ class XAIProxySTTProvider(TranscriptionProvider):
 
             with path.open("rb") as fh:
                 r = requests.post(
-                    f"{base}/stt",
+                    f'{base}{"/audio/transcriptions" if _api_format() == "openai" else "/stt"}',
                     headers={
                         "Authorization": f"Bearer {key}",
                         "User-Agent": "Hermes-XAI-Proxy/stt",

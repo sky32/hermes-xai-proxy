@@ -1,21 +1,39 @@
 # hermes-xai-proxy
 
-将 Hermes Agent 的 xAI/Grok 能力转发到任意兼容 xAI API 的 HTTP 代理。
+将 Hermes Agent 的模型和媒体能力转发到可配置协议的 HTTP 代理。
+
+## 协议格式
+
+通过 `xai_proxy.api_format` 选择代理请求格式：
+
+```yaml
+xai_proxy:
+  api_format: openai  # openai 或 xai
+```
+
+`openai` 模式是推荐模式：对话使用 OpenAI Chat Completions，图片使用
+OpenAI Images 字段，TTS 使用 `/audio/speech`，STT 使用
+`/audio/transcriptions`，网页搜索使用 OpenAI Responses 的
+`web_search_preview` 工具。
+
+`xai` 模式保留旧行为：对话使用 Responses，图片/视频/TTS/STT 使用原有
+xAI/Grok 字段和路径。未设置时默认为 `xai`，以兼容旧配置。
+
+视频接口需要特别注意：OpenAI 标准视频接口与 Grok Imagine 的异步任务协议
+并不完全一致。如果代理只实现 `/videos/generations`，视频插件应使用
+`api_format: xai`；只有代理同时实现 OpenAI `/videos` 协议时，才适合使用
+OpenAI 视频模式。
 
 ## 功能
 
 支持以下能力：
 
-- 模型供应商：`xai`
-- 网页搜索供应商：`xai`
-- 图片生成供应商：`xai`
-- 视频生成供应商：`xai`
+- 模型、网页搜索、图片和视频代理插件
 - `x_search` 工具
 - `xai_video_edit` 和 `xai_video_extend` 工具
-- TTS 供应商：`xai-proxy`
-- STT 供应商：`xai-proxy`
+- OpenAI/xAI 可选协议的 TTS 和 STT 代理插件
 
-Hermes 不允许 Python 插件覆盖内置 TTS/STT 名称，因此 TTS 和 STT 使用 `xai-proxy`。
+Hermes 不允许 Python 插件覆盖内置 TTS/STT 名称，因此 TTS 和 STT 使用项目自己的代理 provider 名称。
 
 ## 配置
 
@@ -33,6 +51,7 @@ XAI_PROXY_SEARCH_MODEL=grok-4.20-multi-agent-0309
 XAI_PROXY_TTS_MODEL=grok-voice-think-fast-2.0
 XAI_PROXY_STT_MODEL=grok-stt
 XAI_PROXY_STT_TIMEOUT=180
+XAI_PROXY_API_FORMAT=openai
 ```
 
 ### 自定义附加参数
@@ -138,7 +157,8 @@ tts:
     speed: 1.0
 ```
 
-TTS 请求发送到 `POST $XAI_PROXY_BASE_URL/tts`，语音列表从 `GET /tts/voices` 获取；如果接口不可用，插件会使用内置语音列表作为回退。
+OpenAI 模式的 TTS 请求发送到 `POST $XAI_PROXY_BASE_URL/audio/speech`；xAI 模式发送到
+`POST $XAI_PROXY_BASE_URL/tts`。语音列表接口不可用时，插件会使用内置语音列表作为回退。
 
 ## STT 配置
 
@@ -149,7 +169,8 @@ stt:
     model: grok-stt
 ```
 
-STT 请求以 multipart 形式发送到 `POST $XAI_PROXY_BASE_URL/stt`。
+STT 请求以 OpenAI 兼容的 multipart 形式发送到
+`POST $XAI_PROXY_BASE_URL/audio/transcriptions`；xAI 模式使用 `/stt`。
 
 ## 卸载
 

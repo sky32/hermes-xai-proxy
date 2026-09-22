@@ -22,6 +22,15 @@ def _extra_params() -> Dict[str, Any]:
     return out
 
 
+def _api_format() -> str:
+    try:
+        cfg = load_config() or {}
+    except Exception:
+        cfg = {}
+    value = ((cfg.get("xai_proxy") or {}).get("api_format") or get_env_value("XAI_PROXY_API_FORMAT") or "xai")
+    return str(value).strip().lower() if str(value).strip().lower() in {"xai", "openai"} else "xai"
+
+
 def _proxy_credentials() -> Dict[str, Any]:
     key = str(get_env_value("XAI_PROXY_API_KEY") or "").strip()
     base_url = str(get_env_value("XAI_PROXY_BASE_URL") or "").strip().rstrip("/")
@@ -78,7 +87,22 @@ def register(ctx) -> None:
     def post_json_with_extras(endpoint_url, *args, **kwargs):
         payload = kwargs.get("payload")
         if isinstance(payload, dict):
-            kwargs["payload"] = {**payload, **_extra_params()}
+            merged = {**payload, **_extra_params()}
+            if _api_format() == "openai":
+                # OpenAI Images uses `size`/`quality`; these xAI-only fields
+                # must not leak onto the OpenAI wire format.
+                aspect = merged.pop("aspect_ratio", None)
+                resolution = merged.pop("resolution", None)
+                merged.pop("storage_options", None)
+                if aspect and "size" not in merged:
+                    merged["size"] = {
+                        "1:1": "1024x1024",
+                        "2:3": "1024x1536",
+                        "3:2": "1536x1024",
+                    }.get(str(aspect), "1024x1024")
+                if resolution in {"1k", "2k"} and "quality" not in merged:
+                    merged["quality"] = "medium" if resolution == "2k" else "low"
+            kwargs["payload"] = merged
         return original_post_json(endpoint_url, *args, **kwargs)
 
     mod.post_json = post_json_with_extras

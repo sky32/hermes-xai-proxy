@@ -21,6 +21,15 @@ def _extra_params() -> Dict[str, Any]:
     return out
 
 
+def _api_format() -> str:
+    try:
+        cfg = load_config() or {}
+    except Exception:
+        cfg = {}
+    value = ((cfg.get("xai_proxy") or {}).get("api_format") or get_env_value("XAI_PROXY_API_FORMAT") or "xai")
+    return str(value).strip().lower() if str(value).strip().lower() in {"xai", "openai"} else "xai"
+
+
 def _proxy_credentials() -> Dict[str, Any]:
     key = str(get_env_value("XAI_PROXY_API_KEY") or "").strip()
     base_url = str(get_env_value("XAI_PROXY_BASE_URL") or "").strip().rstrip("/")
@@ -81,6 +90,14 @@ def register(ctx) -> None:
         def _post_responses(base_url, payload, api_key, timeout, *, is_oauth_path):
             merged = dict(payload)
             merged.update(_extra_params())
+            if _api_format() == "openai":
+                merged.pop("include", None)
+                merged["tools"] = [
+                    {"type": "web_search_preview"}
+                    if isinstance(tool, dict) and tool.get("type") == "web_search"
+                    else tool
+                    for tool in merged.get("tools", [])
+                ]
             return original_post(base_url, merged, api_key, timeout, is_oauth_path=is_oauth_path)
 
     class XAIProxyWebProvider(XAIProxyWebSearchProvider):

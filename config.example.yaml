@@ -13,6 +13,9 @@ plugins:
 # or upstream-specific; use the per-plugin extra_params blocks below when a
 # setting should apply only to one plugin.
 xai_proxy:
+  # Wire protocol: openai or xai. OpenAI mode is recommended for
+  # /chat/completions, image generation, TTS and STT.
+  api_format: openai
   extra_params:
     images: {}
     chat: {}
@@ -23,7 +26,8 @@ xai_proxy:
     stt: {}
     web: {}
 
-# The model provider keeps the canonical name "xai".
+# The provider id remains "xai" for Hermes compatibility; api_format controls
+# the protocol sent to the proxy.
 model:
   provider: xai
   default: grok-4.7

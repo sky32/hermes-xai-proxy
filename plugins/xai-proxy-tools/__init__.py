@@ -22,6 +22,15 @@ def _extra_params(operation: str) -> Dict[str, Any]:
     return out
 
 
+def _api_format() -> str:
+    try:
+        cfg = load_config() or {}
+    except Exception:
+        cfg = {}
+    value = ((cfg.get("xai_proxy") or {}).get("api_format") or get_env_value("XAI_PROXY_API_FORMAT") or "xai")
+    return str(value).strip().lower() if str(value).strip().lower() in {"xai", "openai"} else "xai"
+
+
 def _proxy_credentials() -> Dict[str, Any]:
     key = str(get_env_value("XAI_PROXY_API_KEY") or "").strip()
     base_url = str(get_env_value("XAI_PROXY_BASE_URL") or "").strip().rstrip("/")
@@ -128,7 +137,7 @@ def _x_search(args, **kwargs):
     if not query:
         return json.dumps({"success": False, "error": "query is required"}, ensure_ascii=False)
 
-    tool = {"type": "x_search"}
+    tool = {"type": "web_search_preview" if _api_format() == "openai" else "x_search"}
     for key in (
         "allowed_x_handles",
         "excluded_x_handles",
@@ -226,6 +235,38 @@ def _video_module():
     async def submit_with_extras(api_key, base_url, endpoint, payload, **kwargs):
         merged = dict(payload)
         merged.update(_extra_params("videos"))
+        if _api_format() == "openai":
+            if endpoint != "generations":
+                return mod._xai_error(
+                    "OpenAI video format supports generation only; edit/extend requires xAI format",
+                    "unsupported_operation", merged.get("prompt", ""), model=merged.get("model"),
+                )
+            import httpx
+            openai_payload = {"model": merged.get("model"), "prompt": merged.get("prompt")}
+            if merged.get("duration") is not None:
+                openai_payload["seconds"] = str(merged["duration"])
+            openai_payload["size"] = {"16:9": "1280x720", "9:16": "720x1280", "1:1": "1024x1024"}.get(
+                str(merged.get("aspect_ratio")), "1280x720"
+            )
+            headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+            async with httpx.AsyncClient() as client:
+                response = await client.post(f"{base_url}/videos", headers=headers, json=openai_payload, timeout=60)
+                response.raise_for_status()
+                body = response.json()
+                request_id = body.get("id") or body.get("request_id")
+                if not request_id:
+                    return mod._xai_error("OpenAI video response did not include id", "api_error", merged.get("prompt", ""))
+                response = await client.get(f"{base_url}/videos/{request_id}", headers=headers, timeout=300)
+                response.raise_for_status()
+                body = response.json()
+            video = body.get("video") if isinstance(body.get("video"), dict) else body
+            video_url = video.get("url") or body.get("url")
+            if not video_url:
+                return mod._xai_error("OpenAI video response did not include a URL", "empty_response", merged.get("prompt", ""))
+            return mod.success_response(video=video_url, model=body.get("model") or merged.get("model"),
+                                        prompt=merged.get("prompt", ""), modality="text",
+                                        aspect_ratio=merged.get("aspect_ratio", "16:9"),
+                                        duration=merged.get("duration") or 0, provider="xai-proxy")
         return await original_submit(api_key, base_url, endpoint, merged, **kwargs)
 
     mod._submit_xai_video_payload = submit_with_extras

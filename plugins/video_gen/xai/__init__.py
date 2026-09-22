@@ -22,6 +22,15 @@ def _extra_params(operation: str = "videos") -> Dict[str, Any]:
     return out
 
 
+def _api_format() -> str:
+    try:
+        cfg = load_config() or {}
+    except Exception:
+        cfg = {}
+    value = ((cfg.get("xai_proxy") or {}).get("api_format") or get_env_value("XAI_PROXY_API_FORMAT") or "xai")
+    return str(value).strip().lower() if str(value).strip().lower() in {"xai", "openai"} else "xai"
+
+
 def _proxy_credentials() -> Dict[str, Any]:
     key = str(get_env_value("XAI_PROXY_API_KEY") or "").strip()
     base_url = str(get_env_value("XAI_PROXY_BASE_URL") or "").strip().rstrip("/")
@@ -80,10 +89,62 @@ def _load_video_module():
     async def submit_with_extras(api_key, base_url, endpoint, payload, **kwargs):
         merged = dict(payload)
         merged.update(_extra_params())
+        if _api_format() == "openai":
+            if endpoint != "generations":
+                return mod._xai_error(
+                    "OpenAI video format supports generation only; edit/extend requires xAI format",
+                    "unsupported_operation", merged.get("prompt", ""), model=merged.get("model"),
+                )
+            return await _submit_openai_video(mod, api_key, base_url, merged, **kwargs)
         return await original_submit(api_key, base_url, endpoint, merged, **kwargs)
 
     mod._submit_xai_video_payload = submit_with_extras
     return mod
+
+
+async def _submit_openai_video(mod, api_key: str, base_url: str, payload: Dict[str, Any], **kwargs):
+    """Submit/poll the OpenAI Videos shape while preserving Hermes' result envelope."""
+    import httpx
+
+    prompt = str(payload.get("prompt") or "")
+    model = str(payload.get("model") or "")
+    openai_payload = {"model": model, "prompt": prompt}
+    if payload.get("duration") is not None:
+        openai_payload["seconds"] = str(payload["duration"])
+    resolution = payload.get("resolution")
+    aspect = payload.get("aspect_ratio")
+    openai_payload["size"] = {"16:9": "1280x720", "9:16": "720x1280", "1:1": "1024x1024"}.get(
+        str(aspect), "1280x720"
+    ) if not resolution else ("720x1280" if str(aspect) == "9:16" else "1280x720")
+    if payload.get("image"):
+        openai_payload["input_reference"] = payload["image"]
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    async with httpx.AsyncClient() as client:
+        response = await client.post(f"{base_url}/videos", headers=headers, json=openai_payload, timeout=60)
+        response.raise_for_status()
+        body = response.json()
+        request_id = body.get("id") or body.get("request_id")
+        if not request_id:
+            return mod._xai_error("OpenAI video response did not include id", "api_error", prompt, model=model)
+        elapsed = 0.0
+        while elapsed < mod.DEFAULT_TIMEOUT_SECONDS:
+            response = await client.get(f"{base_url}/videos/{request_id}", headers=headers, timeout=30)
+            response.raise_for_status()
+            body = response.json()
+            status = str(body.get("status") or "").lower()
+            if status in {"completed", "succeeded", "failed", "error", "cancelled", "canceled"}:
+                break
+            await __import__("asyncio").sleep(mod.DEFAULT_POLL_INTERVAL_SECONDS)
+            elapsed += mod.DEFAULT_POLL_INTERVAL_SECONDS
+    if status not in {"completed", "succeeded"}:
+        return mod._xai_error(body.get("error") or f"OpenAI video job ended with status {status!r}", "api_error", prompt, model=model)
+    video = body.get("video") if isinstance(body.get("video"), dict) else body
+    video_url = video.get("url") or body.get("url")
+    if not video_url:
+        return mod._xai_error("OpenAI video response did not include a URL", "empty_response", prompt, model=model)
+    return mod.success_response(video=video_url, model=body.get("model") or model, prompt=prompt,
+                                modality="text", aspect_ratio=aspect or "16:9",
+                                duration=payload.get("duration") or 0, provider="xai-proxy")
 
 
 def register(ctx) -> None:
