@@ -27,13 +27,12 @@ class XAIProxySTTProvider(TranscriptionProvider):
 
     def list_models(self):
         return [
-            {"id": "grok-voice-transcribe-2.0", "display": "Grok Voice Transcribe 2.0"},
-            {"id": "grok-voice-transcribe-1.0", "display": "Grok Voice Transcribe 1.0"},
-            {"id": "grok-stt", "display": "Grok STT (legacy alias)"},
+            {"id": "grok-stt", "display": "Grok STT"},
+            {"id": "grok-voice-think-fast-2.0", "display": "Grok Voice Think Fast 2.0"},
         ]
 
     def default_model(self) -> Optional[str]:
-        return _env("XAI_PROXY_STT_MODEL") or "grok-voice-transcribe-2.0"
+        return _env("XAI_PROXY_STT_MODEL") or "grok-stt"
 
     def transcribe(
         self,

@@ -3,3 +3,8 @@ kind: model-provider
 version: 0.1.0
 description: "Override Hermes xAI model provider and route Grok Responses traffic through XAI_PROXY_BASE_URL."
 author: hermes-xai-proxy
+requires_env:
+  - name: XAI_PROXY_BASE_URL
+    secret: false
+  - name: XAI_PROXY_API_KEY
+    secret: true

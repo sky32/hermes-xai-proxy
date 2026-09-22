@@ -123,7 +123,7 @@ def _x_search(args, **kwargs):
     except Exception:
         cfg = {}
 
-    model = str(cfg.get("model") or get_env_value("XAI_PROXY_SEARCH_MODEL") or "grok-4.6")
+    model = str(cfg.get("model") or get_env_value("XAI_PROXY_SEARCH_MODEL") or "grok-4.20-multi-agent-0309")
     try:
         timeout = max(1, float(cfg.get("timeout_seconds", 180) or 180))
     except (TypeError, ValueError):

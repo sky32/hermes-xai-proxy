@@ -99,7 +99,7 @@ class XAIProxyTTSProvider(TTSProvider):
         rate = max(0.7, min(1.5, rate))
 
         payload = {
-            "model": model or _env("XAI_PROXY_TTS_MODEL") or cfg.get("model") or "grok-tts",
+            "model": model or _env("XAI_PROXY_TTS_MODEL") or cfg.get("model") or "grok-voice-think-fast-2.0",
             "text": text,
             "voice_id": voice or cfg.get("voice_id") or "eve",
             "language": language,

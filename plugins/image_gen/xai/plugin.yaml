@@ -4,5 +4,7 @@ description: "Override Hermes bundled xAI image provider while reusing Hermes' l
 author: hermes-xai-proxy
 kind: backend
 requires_env:
-  - XAI_PROXY_BASE_URL
-  - XAI_PROXY_API_KEY
+  - name: XAI_PROXY_BASE_URL
+    secret: false
+  - name: XAI_PROXY_API_KEY
+    secret: true
