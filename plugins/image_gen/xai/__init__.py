@@ -31,6 +31,10 @@ def _api_format() -> str:
     return str(value).strip().lower() if str(value).strip().lower() in {"xai", "openai"} else "xai"
 
 
+def _wants_remote_url() -> bool:
+    return _api_format() == "openai" and _extra_params().get("response_format") == "url"
+
+
 def _proxy_credentials() -> Dict[str, Any]:
     key = str(get_env_value("XAI_PROXY_API_KEY") or "").strip()
     base_url = str(get_env_value("XAI_PROXY_BASE_URL") or "").strip().rstrip("/")
@@ -82,6 +86,14 @@ def register(ctx) -> None:
     mod = _load_file("_hermes_builtin_image_xai_proxywrap", path)
 
     mod.resolve_xai_http_credentials = lambda *a, **kw: _proxy_credentials()
+    original_materialize_image = mod.materialize_image
+
+    def materialize_image_with_url(b64_json, url, *args, **kwargs):
+        if _wants_remote_url() and isinstance(url, str) and url.strip():
+            return url.strip(), None
+        return original_materialize_image(b64_json, url, *args, **kwargs)
+
+    mod.materialize_image = materialize_image_with_url
     original_post_json = mod.post_json
 
     def post_json_with_extras(endpoint_url, *args, **kwargs):
