@@ -8,9 +8,16 @@ import requests
 from agent.transcription_provider import TranscriptionProvider
 from hermes_cli.config import get_env_value
 
-
 def _env(key: str) -> str:
     return str(get_env_value(key) or "").strip()
+
+
+def _float_env(key: str, default: float) -> float:
+    try:
+        value = float(_env(key) or default)
+        return value if value > 0 else default
+    except (TypeError, ValueError):
+        return default
 
 
 class XAIProxySTTProvider(TranscriptionProvider):
@@ -69,7 +76,7 @@ class XAIProxySTTProvider(TranscriptionProvider):
                     },
                     files={"file": (path.name, fh, mime)},
                     data=data,
-                    timeout=float(_env("XAI_PROXY_STT_TIMEOUT") or 180),
+                    timeout=_float_env("XAI_PROXY_STT_TIMEOUT", 180),
                 )
             r.raise_for_status()
             payload = r.json()

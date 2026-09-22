@@ -12,12 +12,19 @@ def _env(key: str) -> str:
     return str(get_env_value(key) or "").strip()
 
 
+def _positive_number(value: Any, default: float) -> float:
+    try:
+        parsed = float(value)
+        return parsed if parsed > 0 else default
+    except (TypeError, ValueError):
+        return default
+
+
 def _cfg() -> Dict[str, Any]:
     try:
         return ((load_config() or {}).get("tts", {}) or {}).get("xai-proxy", {}) or {}
     except Exception:
         return {}
-
 
 class XAIProxyTTSProvider(TTSProvider):
     @property
@@ -93,9 +100,9 @@ class XAIProxyTTSProvider(TTSProvider):
         codec = "wav" if requested_format == "wav" else "mp3"
 
         language = str(extra.get("language") or cfg.get("language") or "auto")
-        sample_rate = int(cfg.get("sample_rate") or 24000)
-        bit_rate = int(cfg.get("bit_rate") or 128000)
-        rate = float(speed if speed is not None else cfg.get("speed", 1.0) or 1.0)
+        sample_rate = int(_positive_number(cfg.get("sample_rate"), 24000))
+        bit_rate = int(_positive_number(cfg.get("bit_rate"), 128000))
+        rate = _positive_number(speed if speed is not None else cfg.get("speed", 1.0), 1.0)
         rate = max(0.7, min(1.5, rate))
 
         payload = {
@@ -126,7 +133,7 @@ class XAIProxyTTSProvider(TTSProvider):
                     "User-Agent": "Hermes-XAI-Proxy/tts",
                 },
                 json=payload,
-                timeout=float(cfg.get("timeout") or 120),
+                timeout=_positive_number(cfg.get("timeout"), 120),
             )
             r.raise_for_status()
         except requests.RequestException as exc:

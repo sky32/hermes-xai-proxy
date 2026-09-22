@@ -24,11 +24,21 @@ def _proxy_ready() -> bool:
 
 
 def _bundled_file(*parts: str) -> Path:
-    import hermes_cli
+    try:
+        import hermes_cli
+    except ImportError as exc:
+        raise RuntimeError(
+            "Hermes xAI proxy requires the installed Hermes package; "
+            "hermes_cli is unavailable while loading the bundled xAI implementation"
+        ) from exc
     repo_root = Path(hermes_cli.__file__).resolve().parent.parent
     path = repo_root.joinpath(*parts)
     if not path.is_file():
-        raise RuntimeError(f"Hermes bundled file not found: {path}")
+        raise RuntimeError(
+            "Hermes xAI proxy is incompatible with this Hermes version: "
+            f"bundled file not found at {path}. Install a Hermes version containing "
+            f"plugins/{parts[1]}/xai."
+        )
     return path
 
 

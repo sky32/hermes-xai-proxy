@@ -135,6 +135,9 @@ hermes plugins validate /opt/data/plugins/video_gen/xai
 hermes plugins capabilities xai-proxy-tools
 ```
 
+## 运行时兼容性
+
+网页、图片、视频和视频工具插件会复用当前 Hermes 安装中的内置 xAI 实现，不会复制上游代码。如果 Hermes 版本缺少预期的内置文件，插件会报告明确的版本/路径兼容性错误；请升级或使用匹配的 Hermes 版本。
 ## 英文文档
 
 See [README.en.md](README.en.md).

@@ -4,8 +4,9 @@ from providers import register_provider
 from providers.base import ProviderProfile
 
 _base_url = (get_env_value("XAI_PROXY_BASE_URL") or "").strip().rstrip("/")
+# Keep discovery/import safe when the optional proxy is not configured.
 if not _base_url:
-    raise RuntimeError("XAI_PROXY_BASE_URL is required for the xai-proxy model provider")
+    _base_url = ""
 
 xai = ProviderProfile(
     name="xai",

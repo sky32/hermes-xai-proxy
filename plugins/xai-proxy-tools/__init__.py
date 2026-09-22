@@ -24,11 +24,21 @@ def _proxy_ready() -> bool:
 
 
 def _bundled_file(*parts: str) -> Path:
-    import hermes_cli
+    try:
+        import hermes_cli
+    except ImportError as exc:
+        raise RuntimeError(
+            "Hermes xAI proxy requires the installed Hermes package; "
+            "hermes_cli is unavailable while loading the bundled xAI implementation"
+        ) from exc
     repo_root = Path(hermes_cli.__file__).resolve().parent.parent
     path = repo_root.joinpath(*parts)
     if not path.is_file():
-        raise RuntimeError(f"Hermes bundled file not found: {path}")
+        raise RuntimeError(
+            "Hermes xAI proxy is incompatible with this Hermes version: "
+            f"bundled file not found at {path}. Install a Hermes version containing "
+            f"plugins/{parts[1]}/xai."
+        )
     return path
 
 
@@ -148,12 +158,14 @@ def _x_search(args, **kwargs):
             timeout=timeout,
         )
     except requests.RequestException as exc:
-        return json.dumps({"success": False, "error": f"Proxy request failed: {exc}", "provider": "xai-proxy"}, ensure_ascii=False)
+        safe_error = str(exc).replace(c["api_key"], "[redacted]")
+        return json.dumps({"success": False, "error": f"Proxy request failed: {safe_error}", "provider": "xai-proxy"}, ensure_ascii=False)
 
     if not resp.ok:
+        safe_text = resp.text[:500].replace(c["api_key"], "[redacted]")
         return json.dumps({
             "success": False,
-            "error": f"HTTP {resp.status_code}: {resp.text[:500]}",
+            "error": f"HTTP {resp.status_code}: {safe_text}",
             "provider": "xai-proxy",
         }, ensure_ascii=False)
 
@@ -197,23 +209,37 @@ def _video_module():
     return mod
 
 
+def _video_error(message: str) -> str:
+    return json.dumps({"success": False, "provider": "xai-proxy", "error": message}, ensure_ascii=False)
+
+
 def _video_edit(args, **kwargs):
-    mod = _video_module()
-    return mod.run_xai_video_edit(
-        prompt=str(args.get("prompt") or ""),
-        video_url=str(args.get("video_url") or ""),
-        model=args.get("model"),
-    )
+    if not _proxy_ready():
+        return _video_error("XAI_PROXY_BASE_URL / XAI_PROXY_API_KEY not configured")
+    try:
+        mod = _video_module()
+        return mod.run_xai_video_edit(
+            prompt=str(args.get("prompt") or ""),
+            video_url=str(args.get("video_url") or ""),
+            model=args.get("model"),
+        )
+    except Exception:
+        return _video_error("xAI proxy video edit failed; check Hermes and proxy logs")
 
 
 def _video_extend(args, **kwargs):
-    mod = _video_module()
-    return mod.run_xai_video_extend(
-        prompt=str(args.get("prompt") or ""),
-        video_url=str(args.get("video_url") or ""),
-        duration=args.get("duration"),
-        model=args.get("model"),
-    )
+    if not _proxy_ready():
+        return _video_error("XAI_PROXY_BASE_URL / XAI_PROXY_API_KEY not configured")
+    try:
+        mod = _video_module()
+        return mod.run_xai_video_extend(
+            prompt=str(args.get("prompt") or ""),
+            video_url=str(args.get("video_url") or ""),
+            duration=args.get("duration"),
+            model=args.get("model"),
+        )
+    except Exception:
+        return _video_error("xAI proxy video extend failed; check Hermes and proxy logs")
 
 
 def register(ctx):

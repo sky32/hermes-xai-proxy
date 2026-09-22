@@ -134,6 +134,10 @@ hermes plugins validate /opt/data/plugins/video_gen/xai
 hermes plugins capabilities xai-proxy-tools
 ```
 
+## Runtime compatibility
+
+The web, image, video, and video-tool plugins reuse the bundled xAI implementations from the installed Hermes package instead of copying upstream code. If the Hermes version does not contain the expected files, the plugin reports an actionable version/path compatibility error; upgrade Hermes or use a matching version.
+
 ## Design note
 
 This repository is a compatibility/adapter layer. It does not embed or redistribute Hermes' bundled xAI image/video/web implementations; those modules are loaded from the user's installed Hermes package at runtime.
