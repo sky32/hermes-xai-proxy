@@ -40,7 +40,7 @@ web:
 
 image_gen:
   provider: xai
-  model: grok-imagine-image-2.0
+  model: grok-imagine-image-quality
   # Example: n: 1, response_format: url, or stream: true for a proxy that
   # supports the image-generation SSE extension.
   extra_params: {}

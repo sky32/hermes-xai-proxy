@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import importlib.util
+import logging
 import sys
 from pathlib import Path
 from typing import Any, Dict
 
 from hermes_cli.config import get_env_value, load_config
+
+logger = logging.getLogger(__name__)
 
 
 def _extra_params() -> Dict[str, Any]:
@@ -89,8 +92,13 @@ def register(ctx) -> None:
     original_materialize_image = mod.materialize_image
 
     def materialize_image_with_url(b64_json, url, *args, **kwargs):
-        if _wants_remote_url() and isinstance(url, str) and url.strip():
-            return url.strip(), None
+        if _wants_remote_url():
+            if isinstance(url, str) and url.strip():
+                return url.strip(), None
+            raise RuntimeError(
+                "Proxy requested response_format=url but returned no data[0].url; "
+                "check the configured image model and proxy response format"
+            )
         return original_materialize_image(b64_json, url, *args, **kwargs)
 
     mod.materialize_image = materialize_image_with_url
@@ -114,8 +122,26 @@ def register(ctx) -> None:
                     }.get(str(aspect), "1024x1024")
                 if resolution in {"1k", "2k"} and "quality" not in merged:
                     merged["quality"] = "medium" if resolution == "2k" else "low"
+                logger.info(
+                    "OpenAI image proxy request: model=%s response_format=%s n=%s stream=%s",
+                    merged.get("model"), merged.get("response_format"),
+                    merged.get("n"), merged.get("stream"),
+                )
             kwargs["payload"] = merged
-        return original_post_json(endpoint_url, *args, **kwargs)
+        result = original_post_json(endpoint_url, *args, **kwargs)
+        if _wants_remote_url():
+            try:
+                body = result[0] if isinstance(result, tuple) else result
+                data = body.get("data", []) if isinstance(body, dict) else []
+                first = data[0] if data and isinstance(data[0], dict) else {}
+                logger.info(
+                    "OpenAI image proxy response shape: top_keys=%s data_keys=%s",
+                    sorted(body.keys()) if isinstance(body, dict) else type(body).__name__,
+                    sorted(first.keys()) if isinstance(first, dict) else type(first).__name__,
+                )
+            except Exception:
+                logger.debug("Could not inspect OpenAI image proxy response shape", exc_info=True)
+        return result
 
     mod.post_json = post_json_with_extras
 
