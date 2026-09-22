@@ -1,0 +1,5 @@
+name: xai-proxy-model
+kind: model-provider
+version: 0.1.0
+description: "Override Hermes xAI model provider and route Grok Responses traffic through XAI_PROXY_BASE_URL."
+author: hermes-xai-proxy

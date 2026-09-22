@@ -1,0 +1,10 @@
+name: xai-proxy-web
+version: 0.1.0
+description: "Override Hermes bundled xAI web-search provider and route web_search through an xAI-compatible proxy."
+author: hermes-xai-proxy
+kind: backend
+requires_env:
+  - XAI_PROXY_BASE_URL
+  - XAI_PROXY_API_KEY
+provides_web_providers:
+  - xai

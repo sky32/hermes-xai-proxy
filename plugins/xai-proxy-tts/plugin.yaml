@@ -1,0 +1,11 @@
+name: xai-proxy-tts
+version: 0.1.0
+description: "xAI-compatible /v1/tts provider using XAI_PROXY_BASE_URL."
+author: hermes-xai-proxy
+requires_env:
+  - name: XAI_PROXY_BASE_URL
+    secret: false
+  - name: XAI_PROXY_API_KEY
+    secret: true
+python_dependencies:
+  - "requests>=2.31,<3"

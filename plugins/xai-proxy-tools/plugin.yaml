@@ -1,0 +1,17 @@
+name: xai-proxy-tools
+version: 0.1.0
+description: "Override Hermes x_search, xai_video_edit and xai_video_extend so they use XAI_PROXY_BASE_URL."
+author: hermes-xai-proxy
+capabilities:
+  - tools.override
+provides_tools:
+  - x_search
+  - xai_video_edit
+  - xai_video_extend
+requires_env:
+  - name: XAI_PROXY_BASE_URL
+    secret: false
+  - name: XAI_PROXY_API_KEY
+    secret: true
+python_dependencies:
+  - "requests>=2.31,<3"

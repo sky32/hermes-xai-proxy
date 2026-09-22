@@ -1,0 +1,52 @@
+plugins:
+    - xai-proxy-model
+    - xai-proxy-web
+    - xai-proxy-image
+    - xai-proxy-video
+    - xai-proxy-tools
+    - xai-proxy-tts
+    - xai-proxy-stt
+
+# The model provider keeps the canonical name "xai".
+model:
+  provider: xai
+  default: grok-4.7
+
+web:
+  search_backend: xai
+  xai:
+    model: grok-4.20-multi-agent-0309
+    timeout: 120
+
+image_gen:
+  provider: xai
+  model: grok-imagine-image-2.0
+
+video_gen:
+  provider: xai
+  model: grok-imagine-video
+
+x_search:
+  model: grok-4.20-multi-agent-0309
+  timeout_seconds: 180
+  retries: 2
+
+# Hermes built-in "xai" TTS cannot be shadowed by a plugin,
+# therefore this project registers the proxy TTS as "xai-proxy".
+tts:
+  provider: xai-proxy
+  xai-proxy:
+    model: grok-voice-think-fast-2.0
+    voice_id: eve
+    language: auto
+    speed: 1.0
+    sample_rate: 24000
+    bit_rate: 128000
+    timeout: 120
+
+# Same rule for STT: built-ins always win, so use xai-proxy.
+stt:
+  provider: xai-proxy
+  xai-proxy:
+    model: grok-stt
+    language: ""
